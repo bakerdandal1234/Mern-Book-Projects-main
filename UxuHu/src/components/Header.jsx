@@ -1,9 +1,18 @@
 import React, { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext.jsx';
 import { ThemeContext } from '../context/ThemeConext.jsx';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
-function Header() {
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+
+export default function Header() {
   const { theme, toggleTheme } = useContext(ThemeContext);
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -14,79 +23,84 @@ function Header() {
 
   const isLight = theme === 'light';
 
-  const headerStyle = {
-    backgroundColor: isLight ? '#ffffff' : '#333333',
-    color: isLight ? '#000000' : '#ffffff',
-    padding: '15px 30px',
-    borderRadius: '15px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    border: '1px solid #ccc',
-    // marginBottom: '3px',
-  };
-
-  const buttonStyle = {
-    padding: '8px 14px',
-    margin: '0 5px',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    textDecoration: 'none',
-  };
-
-  const primaryStyle = {
-    ...buttonStyle,
-    backgroundColor: '#007BFF',
-    color: '#fff',
-  };
-
-  const logoutStyle = {
-    ...buttonStyle,
-    backgroundColor: '#dc3545',
-    color: '#fff',
-  };
-
-  const toggleStyle = {
-    ...buttonStyle,
-    backgroundColor: isLight ? '#f0f0f0' : '#555',
-    color: isLight ? '#000' : '#fff',
-    border: '1px solid #ccc',
-  };
-
   return (
-    <header style={headerStyle}>
-      <h1 style={{ margin: 0 }}>baker dandal</h1>
+    <AppBar position="static" color={isLight ? 'primary' : 'default'}>
+      <Toolbar sx={{ justifyContent: 'space-between' }}>
+        {/* عنوان أو شعار الموقع */}
+        <Typography
+          variant="h6"
+          component={RouterLink}
+          to="/"
+          sx={{
+            textDecoration: 'none',
+            color: 'inherit',
+            fontWeight: 'bold',
+          }}
+        >
+          baker dandal
+        </Typography>
 
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <button onClick={toggleTheme} style={toggleStyle}>
-          Toggle {isLight ? 'Dark' : 'Light'} Mode
-        </button>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {/* زر تبديل الثيم */}
+          <IconButton
+            edge="start"
+            color="inherit"
+            onClick={toggleTheme}
+            sx={{
+              bgcolor: isLight ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+              '&:hover': {
+                bgcolor: isLight ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'
+              }
+            }}
+          >
+            {isLight ? <DarkModeIcon /> : <LightModeIcon />}
+          </IconButton>
 
-        {user ? (
-          <>
-            <Link to="/dashboard" style={primaryStyle}>
-              Dashboard
-            </Link>
-            <button onClick={handleLogout} style={logoutStyle}>
-              Logout
-            </button>
-          </>
-        ) : (
-          <>
-            <Link to="/signup" style={primaryStyle}>
-              Signup
-            </Link>
-            <Link to="/login" style={primaryStyle}>
-              Login
-            </Link>
-          </>
-        )}
-      </div>
-    </header>
+          {/* روابط أو أزرار الدخول/التسجيل أو لوحة التحكم وتسجيل الخروج */}
+          {user ? (
+            <>
+              <Button
+                component={RouterLink}
+                to="/dashboard"
+                variant="contained"
+                color="secondary"
+                sx={{ borderRadius: 2, px: 2 }}
+              >
+                Dashboard
+              </Button>
+              <Button
+                onClick={handleLogout}
+                variant="contained"
+                color="error"
+                sx={{ borderRadius: 2, px: 2 }}
+              >
+                Logout
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                component={RouterLink}
+                to="/signup"
+                variant="contained"
+                color="secondary"
+                sx={{ borderRadius: 2, px: 2 }}
+              >
+                Signup
+              </Button>
+              <Button
+                component={RouterLink}
+                to="/login"
+                variant="contained"
+                color="secondary"
+                sx={{ borderRadius: 2, px: 2 }}
+              >
+                Login
+              </Button>
+            </>
+          )}
+        </Box>
+      </Toolbar>
+    </AppBar>
   );
 }
-
-export default Header;

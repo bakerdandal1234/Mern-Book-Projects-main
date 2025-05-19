@@ -2,39 +2,47 @@ import React, { useContext } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Container,
+  Typography,
+  Paper,
+  TextField,
+  FormControlLabel,
+  Checkbox,
+  Button,
+  Alert,
+  Stack
+} from '@mui/material';
 import Header from '../components/Header';
 import { ThemeContext } from '../context/ThemeConext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
-// Define the validation schema with Zod
+// Zod schema for validation
 const signupSchema = z.object({
-  username: z.string().min(2, { message: 'Username must be at least 2 characters ui' }),
-  email: z.string().email({ message: 'Please enter a valid email address ui' }),
+  username: z.string().min(2, { message: 'Username must be at least 2 characters uu' }),
+  email: z.string().email({ message: 'Please enter a valid email address' }),
   password: z.string()
     .min(8, { message: 'Password must be at least 8 characters' })
     .regex(/[A-Z]/, { message: 'Password must contain at least one uppercase letter' })
     .regex(/[0-9]/, { message: 'Password must contain at least one number' }),
   password_confirmation: z.string(),
-  agreeToTerms: z.literal(true, {
-    errorMap: () => ({ message: 'You must agree to the terms and privacy policy' }),
-  }),
+  agreeToTerms: z.literal(true, { errorMap: () => ({ message: 'You must agree to the terms and privacy policy' }) }),
 }).refine((data) => data.password === data.password_confirmation, {
   message: "Passwords don't match",
   path: ['password_confirmation'],
 });
 
-
-function Signup() {
+export default function Signup() {
   const { theme } = useContext(ThemeContext);
   const navigate = useNavigate();
   const { register: authRegister, errors: authErrors, isLoading } = useAuth();
 
-  // Initialize React Hook Form with Zod resolver
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors }
   } = useForm({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -42,164 +50,92 @@ function Signup() {
       email: '',
       password: '',
       password_confirmation: '',
-      agreeToTerms: false,
-    },
+      agreeToTerms: false
+    }
   });
 
-  // Handle form submission
-  const onSubmit = (data) => {
-    authRegister(data, navigate);
-  };
-
-  // Combine authentication errors with form validation errors
+  const onSubmit = (data) => authRegister(data, navigate);
   const displayErrors = { ...errors, ...authErrors };
 
   return (
     <>
       <Header />
-      <div style={{ maxWidth: '500px', margin: '0 auto', padding: '20px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '5px', textAlign: 'center' }}>Sign up</h1>
-        <p style={{ color: theme === 'light' ? '#000000' : '#ffffff', textAlign: 'center', marginBottom: '20px' }}>
-          Enter your information to sign up
-        </p>
+      <Container maxWidth="sm">
+        <Paper elevation={6} sx={{ mt: 2, p: 4, borderRadius: 3 }}>
+          <Stack spacing={2}>
+            <Typography variant="h4" align="center" fontWeight="bold">
+              Sign Up
+            </Typography>
 
-        {displayErrors.general && (
-          <div style={{ backgroundColor: '#ffebee', color: '#c62828', padding: '10px', borderRadius: '4px', marginBottom: '15px' }}>
-            {displayErrors.general}
-          </div>
-        )}
+            {displayErrors.general && (
+              <Alert severity="error">{displayErrors.general}</Alert>
+            )}
 
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>Name</label>
-            <input
-              type="text"
-              placeholder="Name"
+            <TextField
+              label="Username"
+              fullWidth
               {...register('username')}
-              style={{
-                width: '100%',
-                color: theme === 'light' ? '#000000' : '#1f2937',
-                padding: '8px',
-                backgroundColor: '#f5f9ff',
-                border: displayErrors.username ? '1px solid #c62828' : '1px solid #ddd',
-                borderRadius: '4px'
-              }}
+              error={Boolean(displayErrors.username)}
+              helperText={displayErrors.username?.message}
             />
-            {displayErrors.username && (
-              <p style={{ color: '#c62828', fontSize: '12px', marginTop: '5px' }}>
-                {displayErrors.username.message || displayErrors.username}
-              </p>
-            )}
-          </div>
 
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>Email</label>
-            <input
-              type="text"
-              placeholder="Email"
+            <TextField
+              label="Email"
+              type="email"
+              fullWidth
               {...register('email')}
-              style={{
-                width: '100%',
-                color: theme === 'light' ? '#000000' : '#1f2937',
-                padding: '8px',
-                backgroundColor: '#f5f9ff',
-                border: displayErrors.email ? '1px solid #c62828' : '1px solid #ddd',
-                borderRadius: '4px'
-              }}
+              error={Boolean(displayErrors.email)}
+              helperText={displayErrors.email?.message}
             />
-            {displayErrors.email && (
-              <p style={{ color: '#c62828', fontSize: '12px', marginTop: '5px' }}>
-                {displayErrors.email.message || displayErrors.email}
-              </p>
-            )}
-          </div>
 
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>Password</label>
-            <input
+            <TextField
+              label="Password"
               type="password"
-              placeholder="Password"
+              fullWidth
               {...register('password')}
-              style={{
-                width: '100%',
-                color: theme === 'light' ? '#000000' : '#1f2937',
-                padding: '8px',
-                backgroundColor: '#f5f9ff',
-                border: displayErrors.password ? '1px solid #c62828' : '1px solid #ddd',
-                borderRadius: '4px'
-              }}
+              error={Boolean(displayErrors.password)}
+              helperText={displayErrors.password?.message}
             />
-            {displayErrors.password && (
-              <p style={{ color: '#c62828', fontSize: '12px', marginTop: '5px' }}>
-                {displayErrors.password.message || displayErrors.password}
-              </p>
-            )}
-          </div>
 
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>Confirm Password</label>
-            <input
+            <TextField
+              label="Confirm Password"
               type="password"
-              placeholder="Confirm Password"
+              fullWidth
               {...register('password_confirmation')}
-              style={{
-                width: '100%',
-                color: theme === 'light' ? '#000000' : '#1f2937',
-                padding: '8px',
-                backgroundColor: '#f5f9ff',
-                border: displayErrors.password_confirmation ? '1px solid #c62828' : '1px solid #ddd',
-                borderRadius: '4px'
-              }}
+              error={Boolean(displayErrors.password_confirmation)}
+              helperText={displayErrors.password_confirmation?.message}
             />
-            {displayErrors.password_confirmation && (
-              <p style={{ color: '#c62828', fontSize: '12px', marginTop: '5px' }}>
-                {displayErrors.password_confirmation.message || displayErrors.password_confirmation}
-              </p>
+
+            <FormControlLabel
+              control={<Checkbox {...register('agreeToTerms')} />}
+              label={
+                <Typography variant="body2">
+                  I agree to the <RouterLink to="/terms">Terms</RouterLink> and <RouterLink to="/privacy">Privacy Policy</RouterLink>
+                </Typography>
+              }
+            />
+            {displayErrors.agreeToTerms && (
+              <Typography variant="caption" color="error">
+                {displayErrors.agreeToTerms.message}
+              </Typography>
             )}
-          </div>
 
-          <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center' }}>
-            <input
-              type="checkbox"
-              id="terms"
-              {...register('agreeToTerms')}
-              style={{ marginRight: '8px' }}
-            />
-            <label htmlFor="terms">
-              I agree with <a href="#" style={{ color: theme === 'light' ? '#2E5984' : '#BCD2E8', textDecoration: 'none' }}>terms</a> and <a href="#" style={{ color: theme === 'light' ? '#2E5984' : '#BCD2E8', textDecoration: 'none' }}>privacy policy</a>
-            </label>
-          </div>
-          {displayErrors.agreeToTerms && (
-            <p style={{ color: '#c62828', fontSize: '12px', marginTop: '-15px', marginBottom: '15px' }}>
-              {displayErrors.agreeToTerms.message || displayErrors.agreeToTerms}
-            </p>
-          )}
+            <Button
+              variant="contained"
+              size="large"
+              onClick={handleSubmit(onSubmit)}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Signing Up...' : 'Sign Up'}
+            </Button>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            style={{
-              width: '100%',
-              padding: '10px',
-              backgroundColor: isLoading ? '#cccccc' : '#e3165b',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold',
-              marginBottom: '10px'
-            }}
-          >
-            {isLoading ? 'جاري التسجيل...' : 'SIGN UP'}
-          </button>
-        </form>
-
-        <div style={{ textAlign: 'center' }}>
-          <p>Already have an account? <Link to="/login" style={{ color: theme === 'light' ? '#2E5984' : '#BCD2E8', textDecoration: 'none' }}>Sign in</Link></p>
-        </div>
-      </div>
+            <Typography variant="body2" align="center">
+              Already have an account?{' '}
+              <RouterLink to="/login">Sign in</RouterLink>
+            </Typography>
+          </Stack>
+        </Paper>
+      </Container>
     </>
   );
 }
-
-export default Signup;

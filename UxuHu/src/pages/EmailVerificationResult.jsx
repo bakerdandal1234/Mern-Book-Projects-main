@@ -1,8 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useContext, useEffect, useState } from 'react';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import {
+  Container,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  Stack,
+  Box,
+  CircularProgress
+} from '@mui/material';
+import Header from '../components/Header';
+import { ThemeContext } from '../context/ThemeConext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
 // Zod schema for resend email
@@ -17,8 +30,10 @@ export default function EmailVerificationResult() {
   const [tokenValid, setTokenValid] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // React Hook Form for resend
-  const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(resendSchema) });
+  // React Hook Form
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(resendSchema)
+  });
 
   useEffect(() => {
     (async () => {
@@ -33,48 +48,60 @@ export default function EmailVerificationResult() {
     setLoading(false);
   };
 
-  const renderContent = () => {
-    if (tokenValid === null) return <p>🔄 جارٍ التحقق...</p>;
-    if (tokenValid) {
-      return (
-        <>
-          <h2 className="text-2xl font-bold text-green-600 mb-2">✅ تم التحقق بنجاح</h2>
-          <p className="mb-4">تم تفعيل بريدك الإلكتروني. يمكنك الآن تسجيل الدخول.</p>
-          <button onClick={() => navigate('/login')} className="px-4 py-2 bg-green-700 text-white rounded">
-            تسجيل الدخول
-          </button>
-        </>
-      );
-    }
-    return (
-      <>
-        <h2 className="text-2xl font-bold text-red-600 mb-2">❌ فشل التحقق</h2>
-        <p className="mb-4">رابط التحقق غير صالح أو منتهي. يمكنك إعادة إرسال الرابط.</p>
-        <form onSubmit={handleSubmit(onResend)} className="flex flex-col gap-3">
-          <input
-            type="email"
-            placeholder="أدخل بريدك الإلكتروني"
-            {...register('email')}
-            disabled={loading}
-            className="p-2 border rounded"
-          />
-          {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className={`py-2 px-4 rounded ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 text-white'}`}
-          >
-            {loading ? 'جارٍ الإرسال...' : 'إعادة إرسال رابط التحقق'}
-          </button>
-          {authErrors && <p className="text-red-600 text-sm">{authErrors}</p>}
-        </form>
-      </>
-    );
-  };
-
   return (
-    <div className="max-w-md mx-auto mt-20 p-6 border-2 rounded bg-gray-50">
-      {renderContent()}
-    </div>
+    <>
+      <Header />
+      <Container maxWidth="sm">
+        <Paper elevation={6} sx={{ mt: 8, p: 4, borderRadius: 3 }}>
+          <Stack spacing={3}>
+            {tokenValid === null && (
+              <Box textAlign="center">
+                <CircularProgress />
+                <Typography variant="body1" sx={{ mt: 2 }}>🔄 جارٍ التحقق...</Typography>
+              </Box>
+            )}
+
+            {tokenValid === true && (
+              <Stack spacing={2} alignItems="center">
+                <Typography variant="h5" color="success.main">✅ تم التحقق بنجاح</Typography>
+                <Typography>تم تفعيل بريدك الإلكتروني بنجاح. يمكنك الآن تسجيل الدخول.</Typography>
+                <Button variant="contained" onClick={() => navigate('/login')} fullWidth>
+                  تسجيل الدخول
+                </Button>
+              </Stack>
+            )}
+
+            {tokenValid === false && (
+              <Stack spacing={2}>
+                <Alert severity="error">{authErrors || 'رابط التحقق غير صالح أو منتهي.'}</Alert>
+                <Typography>يمكنك إعادة إرسال رابط التحقق إلى بريدك الإلكتروني:</Typography>
+                <TextField
+                  label="البريد الإلكتروني"
+                  type="email"
+                  fullWidth
+                  {...register('email')}
+                  error={Boolean(errors.email)}
+                  helperText={errors.email?.message}
+                  disabled={loading}
+                />
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={handleSubmit(onResend)}
+                  disabled={loading}
+                  fullWidth
+                >
+                  {loading ? 'جارٍ الإرسال...' : 'إعادة إرسال رابط التحقق'}
+                </Button>
+                {authErrors && <Alert severity="error">{authErrors}</Alert>}
+                <Button component={RouterLink} to="/login" fullWidth>
+                  الرجوع لتسجيل الدخول
+                </Button>
+              </Stack>
+            )}
+          </Stack>
+        </Paper>
+      </Container>
+    </>
   );
 }
