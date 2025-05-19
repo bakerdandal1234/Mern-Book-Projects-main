@@ -1,16 +1,4 @@
-const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
-// إعداد OAuth2
-const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI
-);
-
-oauth2Client.setCredentials({
-    refresh_token: process.env.GOOGLE_REFRESH_TOKEN
-    
-});
 
 // إنشاء قالب البريد الإلكتروني
 function createEmailTemplate(title, message1, message2, buttonText, buttonUrl) {
@@ -45,23 +33,18 @@ function createEmailTemplate(title, message1, message2, buttonText, buttonUrl) {
     `;
 }
 
-// إنشاء ناقل البريد الإلكتروني
-async function createTransporter() {
+// إنشاء ناقل البريد الإلكتروني باستخدام SMTP
+function createTransporter() {
     try {
-        const accessToken = await oauth2Client.getAccessToken();
-        
         return nodemailer.createTransport({
-            service: 'gmail',
+            host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+            port: process.env.EMAIL_PORT || 587,
+            secure: process.env.EMAIL_PORT === '465', // صحيح إذا كان المنفذ 465
             auth: {
-                type: 'OAuth2',
-                user: process.env.RESEND_FROM_EMAIL,
-                clientId: process.env.GOOGLE_CLIENT_ID,
-                clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-                refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-                accessToken: accessToken.token
-                }
-            });
-
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
     } catch (error) {
         console.error('Error creating transporter:', error);
         throw error;
@@ -73,11 +56,11 @@ async function sendVerificationEmail(email, verificationToken) {
     try {
         console.log('Starting to send verification email to:', email);
         
-        const transporter = await createTransporter();
+        const transporter = createTransporter();
         const verificationUrl = `${process.env.APP_URL}/verify-email/${verificationToken}`;
         
         const mailOptions = {
-            from: process.env.RESEND_FROM_EMAIL,
+            from: `"خدمة الكتب" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: 'تأكيد البريد الإلكتروني',
             html: createEmailTemplate(
@@ -90,6 +73,7 @@ async function sendVerificationEmail(email, verificationToken) {
         };
         
         const result = await transporter.sendMail(mailOptions);
+        console.log('Verification email sent successfully:', result.messageId);
         
         return result;
     } catch (error) {
@@ -101,9 +85,7 @@ async function sendVerificationEmail(email, verificationToken) {
 // إرسال بريد إعادة تعيين كلمة المرور
 async function sendResetPasswordEmail(email, resetToken) {
     try {
-       
-        
-        const transporter = await createTransporter();
+        const transporter = createTransporter();
 
         // تأكد من أن APP_URL صحيح (مثال: http://localhost:3000)
         const resetUrl = `${process.env.APP_URL}/reset-password/${resetToken}`;
@@ -111,7 +93,7 @@ async function sendResetPasswordEmail(email, resetToken) {
         console.log('Reset URL:', resetUrl); // للتحقق من الرابط
 
         const mailOptions = {
-            from: process.env.RESEND_FROM_EMAIL,
+            from: `"خدمة الكتب" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: 'إعادة تعيين كلمة المرور',
             html: createEmailTemplate(
@@ -124,7 +106,7 @@ async function sendResetPasswordEmail(email, resetToken) {
         };
 
         const info = await transporter.sendMail(mailOptions);
-       
+        console.log('Reset password email sent successfully:', info.messageId);
         
         return info;
     } catch (error) {
