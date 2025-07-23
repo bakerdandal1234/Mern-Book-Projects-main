@@ -5,6 +5,7 @@ const session = require('express-session')
 const cookieParser = require("cookie-parser");
 const rootRoutes = require('./routes/authRoutes')
 const authRouter = require("./routes/Socialite")
+const postRoutes = require('./routes/postRoutes')
 const corsMiddleware = require("./security/cors");
 app.use(corsMiddleware);
 const rateLimit = require("./security/rateLimit");
@@ -33,6 +34,7 @@ app.use(cookieParser()); // هنا
 require('dotenv').config()
 app.use(rootRoutes)
 app.use("/auth", authRouter);
+app.use('/api/posts', postRoutes);
 
 
 const oauth = require("./config/oauth");
