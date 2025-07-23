@@ -42,10 +42,11 @@ app.use(oauth.initialize());
 
 // 1. Connect to MongoDB
 const mongoose = require('mongoose')
+const PORT = process.env.PORT || 3000;
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => app.listen(process.env.PORT, () => {
-    console.log(`http://localhost:${process.env.PORT}`)
+  .then(() => app.listen(PORT, () => {
+    console.log(`http://localhost:${PORT}`)
   }) , console.log('✔️ MongoDB connected'))
   .catch(err => console.error('❌ MongoDB connection error:', err));
 

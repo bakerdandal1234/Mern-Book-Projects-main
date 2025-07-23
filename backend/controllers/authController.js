@@ -9,6 +9,8 @@ const { sendResetPasswordEmail } = require("../utils/emailService");
 
 const signup = async (req, res) => {
     try {
+
+        console.log("Signup – req.body =", req.body);
         // التحقق من وجود أخطاء في التحقق
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -20,11 +22,12 @@ const signup = async (req, res) => {
             });
         }
 
-        const { username, email, password } = req.body;
+        const { name, email, password } = req.body;
+        console.log("Signup attempt with:", { name, email, password });
 
         // التحقق من وجود المستخدم
         const existingUser = await User.findOne({
-            $or: [{ email }, { username }],
+            $or: [{ email }, { name }],
         });
 
         if (existingUser) {
@@ -35,7 +38,7 @@ const signup = async (req, res) => {
                     message: "user with this email already exists",
                 });
             }
-            console.log("User with this username already exists:", username);
+            console.log("User with this username already exists:", name);
             return res.status(422).json({
                 success: false,
                 message: "user with this username already exists",
@@ -44,10 +47,10 @@ const signup = async (req, res) => {
 
         // إنشاء رمز التحقق
         const verificationToken = crypto.randomBytes(32).toString("hex");
-        const verificationTokenExpiry = Date.now() + 24 * 60 * 60 * 1000; // 1 hour
+        const verificationTokenExpiry = Date.now() + 60 * 60 * 1000; // 1 hour
         // إنشاء المستخدم
         const user = new User({
-            username,
+            name,
             email,
             password,
             verificationTokenExpiry,
@@ -55,7 +58,7 @@ const signup = async (req, res) => {
         });
 
         await user.save();
-        console.log("User created successfully:", { username, email });
+        console.log("User created successfully:", { name, email });
         await sendVerificationEmail(email, verificationToken);
 
 
@@ -64,7 +67,7 @@ const signup = async (req, res) => {
             message: "تم إنشاء الحساب بنجاح. يرجى التحقق من بريدك الإلكتروني",
             user: {
                 id: user._id,
-                username: user.username,
+                name: user.name,
                 email: user.email,
                 role: user.role,
                 isVerified: user.isVerified,
@@ -106,10 +109,13 @@ const login = async (req, res) => {
             });
         }
 
-        // if(!user.isVerified){
-        //   console.log("Unverified user attempt to login:", email);
-        //   return handleUnauthorized(res,"please verify your account")
-        // }
+        if(!user.isVerified){
+          console.log("Unverified user attempt to login:", email);
+          return res.status(403).json({
+            success: false,
+            message: "Please verify your email before logging in",
+          });
+        }
 
         console.log("Login successful:", email);
         // إنشاء التوكن
@@ -120,7 +126,7 @@ const login = async (req, res) => {
                 email: user.email
             },
             process.env.JWT_SECRET,
-            { expiresIn: "1m" }
+            { expiresIn: "900s" }
         );
 
         const refreshToken = jwt.sign(
@@ -136,7 +142,7 @@ const login = async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
-            maxAge: 60 * 1000, // 1 minute
+            maxAge: 15 * 60 * 1000, // 15 minutes
         });
 
         res.cookie("refreshToken", refreshToken, {
@@ -155,8 +161,9 @@ const login = async (req, res) => {
             accessToken: token,
             user: {
                 id: user._id,
-                username: user.username,
+                name: user.name,
                 email: user.email,
+                permissions: user.permissions,
                 role: user.role,
                 isVerified: user.isVerified,
             },
@@ -194,7 +201,8 @@ const me = (req, res) => {
                 username: user.username,
                 email: user.email,
                 role: user.role,
-                isVerified: user.isVerified
+                isVerified: user.isVerified,
+                permissions: user.permissions // Add this line
             }
         });
     } catch (error) {
@@ -222,7 +230,7 @@ const refresh = async (req, res) => {
       const accessToken = jwt.sign(
         { userId: decoded.userId },
         process.env.JWT_SECRET,
-        { expiresIn: "1m" }
+        { expiresIn: "900s" }
       );
   
       res.cookie("token", accessToken, {
@@ -359,11 +367,11 @@ const forgotPassword = async (req, res) => {
 
         // إنشاء رمز إعادة التعيين
         const resetToken = crypto.randomBytes(32).toString("hex");
-        const resetTokenExpiry = Date.now() + 600000; // ساعة واحدة
+        const resetTokenExpiry = Date.now() + 2*60*1000; // ساعة واحدة
 
         user.resetPasswordToken = resetToken;
         user.resetPasswordExpiry = resetTokenExpiry;
-        await user.save();
+        await user.save({validateBeforeSave: false});
 
         // إرسال بريد إعادة التعيين
         await sendResetPasswordEmail(email, resetToken);
@@ -407,7 +415,7 @@ const resetPassword = async (req, res) => {
         user.password = password;
         user.resetPasswordToken = undefined;
         user.resetPasswordExpiry = undefined;
-        await user.save();
+        await user.save({validateBeforeSave: false});
 
 
 
@@ -455,8 +463,93 @@ const verifyResetToken = async (req, res) => {
     }
 };
 
+const getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find({}, '-password');
+        res.json({ success: true, users });
+    } catch (error) {
+        console.error('Error getting all users:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
 
+const updateUserRoleAndPermissions = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { role, permissions } = req.body;
 
+        const userToUpdate = await User.findById(userId);
+
+        if (!userToUpdate) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // Prevent updating superadmin
+        if (userToUpdate.role === 'superadmin') {
+            return res.status(403).json({ success: false, message: 'Cannot modify a superadmin account' });
+        }
+
+        userToUpdate.role = role || userToUpdate.role;
+        userToUpdate.permissions = permissions || userToUpdate.permissions;
+
+        await userToUpdate.save();
+
+        res.json({ success: true, message: 'User updated successfully', user: userToUpdate });
+    } catch (error) {
+        console.error('Error updating user role and permissions:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+const deleteUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        const userToDelete = await User.findById(userId);
+
+        if (!userToDelete) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // Prevent deleting superadmin
+        if (userToDelete.role === 'superadmin') {
+            return res.status(403).json({ success: false, message: 'Cannot delete a superadmin account' });
+        }
+
+        await userToDelete.deleteOne();
+
+        res.json({ success: true, message: 'User deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+const createUser = async (req, res) => {
+    try {
+        const { name, email, password, role, permissions } = req.body;
+
+        const existingUser = await User.findOne({ $or: [{ email }, { name }] });
+        if (existingUser) {
+            return res.status(409).json({ success: false, message: 'User with this email or name already exists' });
+        }
+
+        const newUser = new User({
+            name,
+            email,
+            password,
+            role: role || 'user',
+            permissions: permissions || [],
+        });
+
+        await newUser.save();
+
+        res.status(201).json({ success: true, message: 'User created successfully', user: newUser });
+    } catch (error) {
+        console.error('Error creating user:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
 
 
 const xyz = (req, res) => {
@@ -468,5 +561,5 @@ const xyz = (req, res) => {
 
 
 module.exports = {
-    xyz, signup, login, logout, me, refresh, verifyEmail, resendVerificationEmail, forgotPassword, resetPassword, verifyResetToken
-}
+    xyz, signup, login, logout, me, refresh, verifyEmail, resendVerificationEmail, forgotPassword, resetPassword, verifyResetToken, getAllUsers, updateUserRoleAndPermissions, deleteUser, createUser
+};
