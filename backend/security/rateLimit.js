@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 // إعداد حدود معدل الطلبات
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,  // 15 دقيقة
-    max: 150,  // حد الطلبات لكل IP
+    max: 1500,  // حد الطلبات لكل IP
     message: 'تم تجاوز عدد الطلبات المسموح به، الرجاء المحاولة لاحقاً',
     standardHeaders: true,
     legacyHeaders: false,

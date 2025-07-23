@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
 const userSchema = new mongoose.Schema({
-    username: {
+    name: {
         type: String,
         required: function() {
             return !this.githubId && !this.googleId && !this.linkedinId; // Only required if not using OAuth
@@ -25,8 +25,12 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['user', 'admin'],
+        enum: ['user', 'admin', 'superadmin'],
         default: 'user'
+    },
+    permissions: {
+        type: [String],
+        default: []
     },
     githubId: {
         type: String,

@@ -5,6 +5,7 @@ const session = require('express-session')
 const cookieParser = require("cookie-parser");
 const rootRoutes = require('./routes/authRoutes')
 const authRouter = require("./routes/Socialite")
+const postRoutes = require('./routes/postRoutes')
 const corsMiddleware = require("./security/cors");
 app.use(corsMiddleware);
 const rateLimit = require("./security/rateLimit");
@@ -33,6 +34,7 @@ app.use(cookieParser()); // هنا
 require('dotenv').config()
 app.use(rootRoutes)
 app.use("/auth", authRouter);
+app.use('/api/posts', postRoutes);
 
 
 const oauth = require("./config/oauth");
@@ -42,10 +44,11 @@ app.use(oauth.initialize());
 
 // 1. Connect to MongoDB
 const mongoose = require('mongoose')
+const PORT = process.env.PORT || 3000;
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => app.listen(process.env.PORT, () => {
-    console.log(`http://localhost:${process.env.PORT}`)
+  .then(() => app.listen(PORT, () => {
+    console.log(`http://localhost:${PORT}`)
   }) , console.log('✔️ MongoDB connected'))
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
